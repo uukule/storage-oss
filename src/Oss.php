@@ -5,11 +5,28 @@ namespace uukule\storage\oss;
 
 
 use uukule\StorageInterface;
+use OSS\OssClient;
+use OSS\Core\OssException;
+use uukule\storage\StorageException as Exception;
 
 class Oss implements StorageInterface
 {
-    public function __construct($config)
+    protected $config = [
+        'accessKeyId' => 'LTAIs3dEAxIoIPjn',
+        'accessKeySecret' => '4aHYuGvVoixA2Jep3UFqvloOSoSdIQ',
+        'endpoint' => 'oss-cn-hangzhou.aliyuncs.com',//如：oss-cn-hangzhou.aliyuncs.com
+        'bucket' => 'oss-app-591cb-com',
+        'domain' => 'oss.app.591cb.com',
+        'root' => ''
+    ];
+    protected $ossClient; //实例
+    public $return = ['err_code' => 1];
+
+    public function __construct($config = [])
     {
+        $config = array_merge($this->config, $config);
+        $this->config = $config;
+        $this->ossClient = new OssClient($config['accessKeyId'], $config['accessKeySecret'], $config['endpoint']);
     }
 
     /**
@@ -20,7 +37,14 @@ class Oss implements StorageInterface
      */
     function exists(string $path): bool
     {
-        // TODO: Implement exists() method.
+        $object = $this->config['root'] . $path;
+        $bucket = $this->config['bucket'];
+        try {
+            $exist = $this->ossClient->doesObjectExist($bucket, $object);
+        } catch (OssException $e) {
+            throw new Exception($e->getMessage(), $e->getCode());
+        }
+        return (bool)$exist;
     }
 
     /**
@@ -57,7 +81,14 @@ class Oss implements StorageInterface
      */
     function put(string $path, $contents, $options = []): bool
     {
-        // TODO: Implement put() method.
+        $bucket = $this->config['bucket'];
+        $object = $this->config['root'] . $path;
+        try {
+            $this->ossClient->putObject($bucket, $object, $contents);
+        } catch (OssException $e) {
+            throw new Exception($e->getMessage(), $e->getCode());
+        }
+        return true;
     }
 
     /**
@@ -68,7 +99,34 @@ class Oss implements StorageInterface
      */
     function putFile(string $path, $file, $options = [])
     {
-        // TODO: Implement putFile() method.
+        $object = $this->config['root'] . $path;
+        $bucket = $this->config['bucket'];
+        if(filter_var($file, FILTER_VALIDATE_URL)){
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $file);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+            $file_content = curl_exec($ch);
+            curl_close($ch);
+            $this->put($path, $file_content);
+        }elseif (is_string($file)) {
+            $this->ossClient->uploadFile($bucket, $object, $file);
+        } //判断是否THINKPHP框架
+        elseif (class_exists('\\think\\File')) {
+            if ($file instanceof \think\File) {
+                    $this->ossClient->uploadFile($bucket, $object, $file->getPathname());
+                unlink($file->getPathname());
+                if (!$this->exists($path)) {
+                    throw new Exception('文件上传失败');
+                }
+                return $this->url($path);
+            } else {
+                throw new \Exception('非法文件');
+            }
+        } else {
+
+        }
+        return true;
     }
 
     /**
