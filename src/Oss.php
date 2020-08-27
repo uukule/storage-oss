@@ -12,11 +12,11 @@ use uukule\storage\StorageException as Exception;
 class Oss implements StorageInterface
 {
     protected $config = [
-        'accessKeyId' => 'LTAIs3dEAxIoIPjn',
-        'accessKeySecret' => '4aHYuGvVoixA2Jep3UFqvloOSoSdIQ',
+        'accessKeyId' => 'LTAI4GKiZeAAPR6aawP5d54x',
+        'accessKeySecret' => 'y4DdJvEc32KN82sE7PZCUsFBYLiEUu',
         'endpoint' => 'oss-cn-hangzhou.aliyuncs.com',//如：oss-cn-hangzhou.aliyuncs.com
-        'bucket' => 'oss-app-591cb-com',
-        'domain' => 'oss.app.591cb.com',
+        'bucket' => 'uukule-storage-test',
+        'domain' => 'uukule-storage-test.oss-cn-hangzhou.aliyuncs.com',
         'root' => ''
     ];
     protected $ossClient; //实例
