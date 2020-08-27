@@ -15,7 +15,7 @@
     },
     "autoload": {
         "psr-4": {
-            "uukule\\storage\\": "packagetest/uukule/storage-oss/src/"
+            "uukule\\storage\\oss\\": "src/"
         }
     }
 }
