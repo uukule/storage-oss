@@ -7,7 +7,7 @@ namespace uukule\storage\oss;
 use uukule\StorageInterface;
 use OSS\OssClient;
 use OSS\Core\OssException;
-use uukule\storage\StorageException as Exception;
+use uukule\StorageException as Exception;
 
 class Oss implements StorageInterface
 {
@@ -56,8 +56,13 @@ class Oss implements StorageInterface
      */
     function get(string $path, bool $lock = false): string
     {
-        // TODO: Implement get() method.
-        return $path;
+        $bucket = $this->config['bucket'];
+        $object = $this->config['root'] . $path;
+        try {
+            return $this->ossClient->getObject($bucket, $object);
+        } catch (OssException $e) {
+            throw new Exception($object . " -> " . $e->getMessage(), $e->getCode());
+        }
     }
 
     /**
@@ -68,7 +73,9 @@ class Oss implements StorageInterface
      */
     function meta(string $path): array
     {
-        // TODO: Implement meta() method.
+        $bucket = $this->config['bucket'];
+        $object = $this->config['root'] . $path;
+        return $this->ossClient->getObjectMeta($bucket, $object);
     }
 
     /**
@@ -101,7 +108,7 @@ class Oss implements StorageInterface
     {
         $object = $this->config['root'] . $path;
         $bucket = $this->config['bucket'];
-        if(filter_var($file, FILTER_VALIDATE_URL)){
+        if (filter_var($file, FILTER_VALIDATE_URL)) {
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $file);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -109,12 +116,12 @@ class Oss implements StorageInterface
             $file_content = curl_exec($ch);
             curl_close($ch);
             $this->put($path, $file_content);
-        }elseif (is_string($file)) {
+        } elseif (is_string($file)) {
             $this->ossClient->uploadFile($bucket, $object, $file);
         } //判断是否THINKPHP框架
         elseif (class_exists('\\think\\File')) {
             if ($file instanceof \think\File) {
-                    $this->ossClient->uploadFile($bucket, $object, $file->getPathname());
+                $this->ossClient->uploadFile($bucket, $object, $file->getPathname());
                 unlink($file->getPathname());
                 if (!$this->exists($path)) {
                     throw new Exception('文件上传失败');
@@ -138,7 +145,16 @@ class Oss implements StorageInterface
      */
     function prepend(string $path, string $data): bool
     {
-        // TODO: Implement prepend() method.
+        $bucket = $this->config['bucket'];
+        $object = $this->config['root'] . $path;
+        try {
+            $content = $this->get($path);
+            $this->delete($path);
+            $this->ossClient->appendObject($bucket, $object, $data . $content, 0);
+        } catch (OssException $e) {
+            throw new Exception($e->getMessage(), $e->getCode());
+        }
+        return true;
     }
 
     /**
@@ -150,7 +166,20 @@ class Oss implements StorageInterface
      */
     function append(string $path, string $data): bool
     {
-        // TODO: Implement append() method.
+        $bucket = $this->config['bucket'];
+        $object = $this->config['root'] . $path;
+        try {
+            if (!$this->ossClient->doesObjectExist($bucket, $object)) {
+                $position = 0;
+            } else {
+                $objectMeta = $this->ossClient->getObjectMeta($bucket, $object);
+                $position = $objectMeta['content-length'];
+            }
+            $this->ossClient->appendObject($bucket, $object, $data, $position);
+        } catch (OssException $e) {
+            throw new Exception($object . " -> " . $e->getMessage(), $e->getCode());
+        }
+        return true;
     }
 
     /**
@@ -161,7 +190,17 @@ class Oss implements StorageInterface
      */
     function delete($paths): bool
     {
-        // TODO: Implement delete() method.
+        $bucket = $this->config['bucket'];
+        $paths = is_array($paths) ? $paths : func_get_args();
+        foreach ($paths as $path) {
+            $object = $this->config['root'] . $path;
+            try {
+                $this->ossClient->deleteObject($bucket, $object);
+            } catch (OssException $e) {
+                throw new Exception($e->getMessage(), $e->getCode());
+            }
+        }
+        return true;
     }
 
     /**
@@ -173,7 +212,17 @@ class Oss implements StorageInterface
      */
     function copy(string $from, string $to): bool
     {
-        // TODO: Implement copy() method.
+        $bucket = $this->config['bucket'];
+        $formObject = $this->config['root'] . $from;
+        $toObject = $this->config['root'] . $to;
+        foreach ($paths as $path) {
+            try {
+                $this->ossClient->copyObject($bucket, $formObject, $bucket, $toObject);
+            } catch (OssException $e) {
+                throw new Exception($e->getMessage(), $e->getCode());
+            }
+        }
+        return true;
     }
 
     /**
@@ -185,7 +234,15 @@ class Oss implements StorageInterface
      */
     function move(string $from, string $to): bool
     {
-        // TODO: Implement move() method.
+        foreach ($paths as $path) {
+            try {
+                $this->copy($from, $to);
+                $this->delete($from);
+            } catch (OssException $e) {
+                throw new Exception($e->getMessage(), $e->getCode());
+            }
+        }
+        return true;
     }
 
     /**
@@ -196,7 +253,10 @@ class Oss implements StorageInterface
      */
     function size(string $path): int
     {
-        // TODO: Implement size() method.
+        $bucket = $this->config['bucket'];
+        $object = $this->config['root'] . $path;
+        $objectMeta = $this->ossClient->getObjectMeta($bucket, $object);
+        return $objectMeta['content-length'];
     }
 
     /**
