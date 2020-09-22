@@ -12,11 +12,11 @@ use uukule\StorageException as Exception;
 class Oss implements StorageInterface
 {
     protected $config = [
-        'accessKeyId' => 'LTAI4GKiZeAAPR6aawP5d54x',
-        'accessKeySecret' => 'y4DdJvEc32KN82sE7PZCUsFBYLiEUu',
-        'endpoint' => 'oss-cn-hangzhou.aliyuncs.com',//如：oss-cn-hangzhou.aliyuncs.com
-        'bucket' => 'uukule-storage-test',
-        'domain' => 'uukule-storage-test.oss-cn-hangzhou.aliyuncs.com',
+        'accessKeyId' => '',
+        'accessKeySecret' => '',
+        'endpoint' => '',//如：oss-cn-hangzhou.aliyuncs.com
+        'bucket' => '',//
+        'domain' => '',//域名
         'root' => ''
     ];
     protected $ossClient; //实例
@@ -371,6 +371,6 @@ class Oss implements StorageInterface
      */
     function url(string $path): string
     {
-        // TODO: Implement url() method.
+        return $this->config['domain'] . $path;
     }
 }
